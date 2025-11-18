@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="StartForm.Designer.cs.bak" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Unbenannt.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -21,7 +25,6 @@
   <ItemGroup>
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
     <PackageReference Include="Pdfium.Net.SDK" Version="4.103.2704" />
-    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
     <PackageReference Include="PDFsharp" Version="6.2.3" />
   </ItemGroup>
 

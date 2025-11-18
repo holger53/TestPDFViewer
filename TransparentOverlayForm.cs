@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -11,6 +12,9 @@ namespace PdfiumOverlayTest
         public Color FillColor { get; set; } = Color.FromArgb(100, 255, 255, 0);
         public string TagText { get; private set; } = string.Empty;
         public Color TagColor { get; private set; } = Color.FromArgb(220, 120, 0);
+
+        private static bool IsInDesigner() =>
+            LicenseManager.UsageMode == LicenseUsageMode.Designtime;
 
         public TransparentOverlayForm()
         {
@@ -28,7 +32,8 @@ namespace PdfiumOverlayTest
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
+                if (!IsInDesigner())
+                    cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
                 return cp;
             }
         }
@@ -36,6 +41,7 @@ namespace PdfiumOverlayTest
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            if (IsInDesigner()) return;
             UpdateLayeredWindow();
         }
 
@@ -43,27 +49,37 @@ namespace PdfiumOverlayTest
         {
             TagText = text;
             TagColor = color;
-            // Kein visuelles Update mehr nötig - Tag wird nur intern gespeichert
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            // Nichts tun
+            if (IsInDesigner())
+            {
+                e.Graphics.Clear(Color.Transparent);
+                using var brush = new SolidBrush(Color.FromArgb(120, FillColor.R, FillColor.G, FillColor.B));
+                e.Graphics.FillRectangle(brush, 0, 0, Width, Height);
+                using var pen = new Pen(Color.FromArgb(200, Color.Black), 3);
+                e.Graphics.DrawRectangle(pen, 1, 1, Width - 3, Height - 3);
+                return;
+            }
+            base.OnPaint(e);
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            // Nichts tun
+            if (IsInDesigner()) return;
         }
 
         protected override void OnSizeChanged(EventArgs e)
         {
             base.OnSizeChanged(e);
+            if (IsInDesigner()) return;
             UpdateLayeredWindow();
         }
 
         private void UpdateLayeredWindow()
         {
+            if (IsInDesigner()) return;
             if (Width <= 0 || Height <= 0 || !IsHandleCreated)
                 return;
 
@@ -74,27 +90,19 @@ namespace PdfiumOverlayTest
                     g.Clear(Color.Transparent);
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-                    // Zeichne nur halbtransparentes Overlay (Alpha = 120)
                     using (var brush = new SolidBrush(Color.FromArgb(120, FillColor.R, FillColor.G, FillColor.B)))
-                    {
                         g.FillRectangle(brush, 0, 0, Width, Height);
-                    }
 
-                    // Zeichne Rahmen
                     using (var pen = new Pen(Color.FromArgb(200, Color.Black), 3))
-                    {
                         g.DrawRectangle(pen, 1, 1, Width - 3, Height - 3);
-                    }
-
-                    // KEIN Tag hier mehr - wird nur auf PDF gezeichnet
                 }
-
                 SetBitmap(bitmap, 255);
             }
         }
 
         private void SetBitmap(Bitmap bitmap, byte opacity)
         {
+            if (IsInDesigner()) return;
             if (!IsHandleCreated || bitmap == null)
                 return;
 
@@ -139,57 +147,16 @@ namespace PdfiumOverlayTest
         private const byte AC_SRC_ALPHA = 0x01;
         private const int ULW_ALPHA = 0x02;
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
-        {
-            public int x;
-            public int y;
-        }
+        [StructLayout(LayoutKind.Sequential)] private struct POINT { public int x; public int y; }
+        [StructLayout(LayoutKind.Sequential)] private struct SIZE { public int cx; public int cy; }
+        [StructLayout(LayoutKind.Sequential, Pack = 1)] private struct BLENDFUNCTION { public byte BlendOp; public byte BlendFlags; public byte SourceConstantAlpha; public byte AlphaFormat; }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct SIZE
-        {
-            public int cx;
-            public int cy;
-        }
-
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        private struct BLENDFUNCTION
-        {
-            public byte BlendOp;
-            public byte BlendFlags;
-            public byte SourceConstantAlpha;
-            public byte AlphaFormat;
-        }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr GetDC(IntPtr hWnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern bool DeleteDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool UpdateLayeredWindow(
-            IntPtr hwnd,
-            IntPtr hdcDst,
-            ref POINT pptDst,
-            ref SIZE psize,
-            IntPtr hdcSrc,
-            ref POINT pptSrc,
-            uint crKey,
-            ref BLENDFUNCTION pblend,
-            uint dwFlags);
+        [DllImport("user32.dll", SetLastError = true)] private static extern IntPtr GetDC(IntPtr hWnd);
+        [DllImport("user32.dll", SetLastError = true)] private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [DllImport("gdi32.dll", SetLastError = true)] private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+        [DllImport("gdi32.dll", SetLastError = true)] private static extern bool DeleteDC(IntPtr hdc);
+        [DllImport("gdi32.dll", SetLastError = true)] private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+        [DllImport("gdi32.dll", SetLastError = true)] private static extern bool DeleteObject(IntPtr hObject);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref POINT pptDst, ref SIZE psize, IntPtr hdcSrc, ref POINT pptSrc, uint crKey, ref BLENDFUNCTION pblend, uint dwFlags);
     }
-}           
+}

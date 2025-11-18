@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -5,7 +6,18 @@ namespace PdfiumOverlayTest
 {
     partial class StartForm
     {
-        // WICHTIG: Felder im Designer-Teil deklarieren
+        private IContainer components = null;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        // FELDER - diese müssen hier deklariert sein
         private Panel _buttonsPanel;
         private Button _btnStartTags;
         private Button _btnCategories;
@@ -13,76 +25,77 @@ namespace PdfiumOverlayTest
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-
-            // Form-Eigenschaften (sichtbar im Designer)
-            this.Text = "Kürzel für PDF-Dateien";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.KeyPreview = true;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.ClientSize = new Size(1200, 800);
-            this.BackgroundImageLayout = ImageLayout.Zoom; // Designeransicht nicht strecken
-
-            // Buttons-Panel
-            _buttonsPanel = new Panel
-            {
-                Size = new Size(1000, 80),
-                BackColor = Color.FromArgb(160, 215, 232, 255), // Pastell-Blau
-                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            _buttonsPanel.Location = new Point(
-                (this.ClientSize.Width - _buttonsPanel.Width) / 2,
-                this.ClientSize.Height - _buttonsPanel.Height - 30
-            );
-            this.Controls.Add(_buttonsPanel);
-
-            // gemeinsame Maße/Abstände
-            var btnSize = new Size(280, 48);
-            int spacing = 60;
-            int top = 16;
-            int left1 = 30;
-            int left2 = left1 + btnSize.Width + spacing; // 370
-            int left3 = left2 + btnSize.Width + spacing; // 710
-
-            // Buttons
-            _btnStartTags = new Button
-            {
-                Text = "Tag setzen (PDF öffnen)",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                Size = btnSize,
-                Location = new Point(left1, top),
-                BackColor = Color.FromArgb(235, 235, 235),
-                FlatStyle = FlatStyle.Flat
-            };
-            _btnStartTags.Click += BtnStartTags_Click;
+            _buttonsPanel = new Panel();
+            _btnStartTags = new Button();
+            _btnCategories = new Button();
+            _btnExit = new Button();
+            _buttonsPanel.SuspendLayout();
+            SuspendLayout();
+            // 
+            // _buttonsPanel
+            // 
+            _buttonsPanel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            _buttonsPanel.BackColor = Color.FromArgb(160, 215, 232, 255);
             _buttonsPanel.Controls.Add(_btnStartTags);
-
-            _btnCategories = new Button
-            {
-                Text = "Kategorien (Tags) verwalten",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                Size = btnSize,
-                Location = new Point(left2, top),
-                BackColor = Color.FromArgb(235, 235, 235),
-                FlatStyle = FlatStyle.Flat
-            };
-            _btnCategories.Click += BtnCategories_Click;
             _buttonsPanel.Controls.Add(_btnCategories);
-
-            _btnExit = new Button
-            {
-                Text = "Beenden",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                Size = btnSize,
-                Location = new Point(left3, top),
-                BackColor = Color.FromArgb(235, 235, 235),
-                FlatStyle = FlatStyle.Flat
-            };
-            _btnExit.Click += BtnExit_Click;
             _buttonsPanel.Controls.Add(_btnExit);
-
-            this.ResumeLayout(false);
+            _buttonsPanel.Location = new Point(78, 664);
+            _buttonsPanel.Name = "_buttonsPanel";
+            _buttonsPanel.Size = new Size(1000, 80);
+            _buttonsPanel.TabIndex = 0;
+            // 
+            // _btnStartTags
+            // 
+            _btnStartTags.BackColor = Color.FromArgb(235, 235, 235);
+            _btnStartTags.FlatStyle = FlatStyle.Flat;
+            _btnStartTags.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            _btnStartTags.Location = new Point(30, 16);
+            _btnStartTags.Name = "_btnStartTags";
+            _btnStartTags.Size = new Size(280, 48);
+            _btnStartTags.TabIndex = 0;
+            _btnStartTags.Text = "Tag setzen (PDF öffnen)";
+            _btnStartTags.UseVisualStyleBackColor = false;
+            _btnStartTags.Click += BtnStartTags_Click;
+            // 
+            // _btnCategories
+            // 
+            _btnCategories.BackColor = Color.FromArgb(235, 235, 235);
+            _btnCategories.FlatStyle = FlatStyle.Flat;
+            _btnCategories.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            _btnCategories.Location = new Point(360, 16);
+            _btnCategories.Name = "_btnCategories";
+            _btnCategories.Size = new Size(280, 48);
+            _btnCategories.TabIndex = 1;
+            _btnCategories.Text = "Kategorien (Tags) verwalten";
+            _btnCategories.UseVisualStyleBackColor = false;
+            _btnCategories.Click += BtnCategories_Click;
+            // 
+            // _btnExit
+            // 
+            _btnExit.BackColor = Color.FromArgb(235, 235, 235);
+            _btnExit.FlatStyle = FlatStyle.Flat;
+            _btnExit.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            _btnExit.Location = new Point(690, 16);
+            _btnExit.Name = "_btnExit";
+            _btnExit.Size = new Size(280, 48);
+            _btnExit.TabIndex = 2;
+            _btnExit.Text = "Beenden";
+            _btnExit.UseVisualStyleBackColor = false;
+            _btnExit.Click += BtnExit_Click;
+            // 
+            // StartForm
+            // 
+            BackgroundImageLayout = ImageLayout.Zoom;
+            ClientSize = new Size(1200, 800);
+            Controls.Add(_buttonsPanel);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            KeyPreview = true;
+            MaximizeBox = false;
+            Name = "StartForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Kürzel für PDF-Dateien";
+            _buttonsPanel.ResumeLayout(false);
+            ResumeLayout(false);
         }
     }
 }

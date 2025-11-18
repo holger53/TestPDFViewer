@@ -8,23 +8,33 @@ namespace PdfiumOverlayTest
 {
     public partial class StartForm : Form
     {
+        private static bool IsInDesigner() =>
+            LicenseManager.UsageMode == LicenseUsageMode.Designtime;
+
         // Farben
         private readonly Color _panelBackColor = Color.FromArgb(160, 215, 232, 255); // Pastell-Blau
         private readonly Color _btnBackColor   = Color.FromArgb(235, 235, 235);      // leichtes Grau
 
         public StartForm()
         {
-            InitializeComponent();              // UI vom Designer laden
+            InitializeComponent();
 
-            // 3D-Effekt anwenden
+            if (IsInDesigner())
+                return;
+
+            // Event-Handler (werden in Designer bereits gesetzt, aber zur Sicherheit)
+            _btnStartTags.Click -= BtnStartTags_Click;    // doppelte Handler vermeiden
+            _btnStartTags.Click += BtnStartTags_Click;
+            _btnCategories.Click -= BtnCategories_Click;
+            _btnCategories.Click += BtnCategories_Click;
+            _btnExit.Click -= BtnExit_Click;
+            _btnExit.Click += BtnExit_Click;
+
             Apply3DStyle(_btnStartTags);
             Apply3DStyle(_btnCategories);
             Apply3DStyle(_btnExit);
 
-            // Buttons-Panel bei Größenänderung zentrieren
             this.SizeChanged += RecenterButtonsPanel;
-
-            // Hintergrundbild nur zur Laufzeit laden (nicht im Designer)
             TryLoadBackgroundImage();
         }
 
@@ -61,11 +71,9 @@ namespace PdfiumOverlayTest
 
         private void TryLoadBackgroundImage()
         {
-            // Im Designer nichts laden, damit die Ansicht nicht überschrieben wird
-            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            if (IsInDesigner())
                 return;
 
-            // Falls im Designer ein Bild gesetzt wurde, nur Layout korrigieren
             if (BackgroundImage != null)
             {
                 BackgroundImageLayout = ImageLayout.Zoom;
@@ -89,7 +97,7 @@ namespace PdfiumOverlayTest
                 {
                     BackgroundImage?.Dispose();
                     BackgroundImage = Image.FromFile(p);
-                    BackgroundImageLayout = ImageLayout.Zoom; // nicht stretchen
+                    BackgroundImageLayout = ImageLayout.Zoom;
                     return;
                 }
             }
