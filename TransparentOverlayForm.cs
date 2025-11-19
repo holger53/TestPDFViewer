@@ -13,6 +13,14 @@ namespace PdfiumOverlayTest
         public string TagText { get; private set; } = string.Empty;
         public Color TagColor { get; private set; } = Color.FromArgb(220, 120, 0);
 
+        // GEÄNDERT: Diese als Properties öffentlich machen
+        private string _currentText = string.Empty;
+        private Color _currentColor = Color.Empty;
+
+        // NEU: Öffentliche Properties hinzufügen
+        public string CurrentText => _currentText;
+        public Color CurrentColor => _currentColor;
+
         private static bool IsInDesigner() =>
             LicenseManager.UsageMode == LicenseUsageMode.Designtime;
 
@@ -47,8 +55,20 @@ namespace PdfiumOverlayTest
 
         public void SetTag(string text, Color color)
         {
-            TagText = text;
-            TagColor = color;
+            _currentText = text;
+            _currentColor = color;
+            TagText = text;  // NEU: Auch TagText setzen
+            TagColor = color; // NEU: Auch TagColor setzen
+
+            // NEU: Automatische Breiteanpassung für längere Texte
+            if (text.Length > 5)
+            {
+                // Berechne benötigte Breite (ca. 15 Pixel pro Zeichen)
+                int neededWidth = Math.Max(200, text.Length * 15);
+                this.Width = Math.Min(neededWidth, 600); // Max 600px
+            }
+
+            Invalidate();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -89,12 +109,32 @@ namespace PdfiumOverlayTest
                 {
                     g.Clear(Color.Transparent);
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias; // NEU
 
                     using (var brush = new SolidBrush(Color.FromArgb(120, FillColor.R, FillColor.G, FillColor.B)))
                         g.FillRectangle(brush, 0, 0, Width, Height);
 
                     using (var pen = new Pen(Color.FromArgb(200, Color.Black), 3))
                         g.DrawRectangle(pen, 1, 1, Width - 3, Height - 3);
+
+                    // NEU: Zeichne Text wenn vorhanden
+                    if (!string.IsNullOrEmpty(_currentText))
+                    {
+                        // Wähle Schriftgröße basierend auf Textlänge
+                        float fontSize = _currentText.Length > 5 ? 14F : 18F; // Kleinere Schrift für lange Texte
+
+                        using (var font = new Font("Arial", fontSize, FontStyle.Bold))
+                        using (var textBrush = new SolidBrush(Color.FromArgb(220, Color.White))) // Leicht transparent
+                        using (var sf = new StringFormat
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        })
+                        {
+                            g.DrawString(_currentText, font, textBrush,
+                                new RectangleF(0, 0, Width, Height), sf);
+                        }
+                    }
                 }
                 SetBitmap(bitmap, 255);
             }

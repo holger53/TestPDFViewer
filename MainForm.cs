@@ -1,13 +1,14 @@
 ﻿using System;
-using System.ComponentModel; // NEU
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using PdfSharp.Pdf;           // NEU
-using PdfSharp.Pdf.IO;        // NEU
-using PdfSharp.Drawing;       // NEU
+using System.Collections.Generic;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
+using PdfSharp.Drawing;
 
 namespace PdfiumOverlayTest
 {
@@ -28,15 +29,18 @@ namespace PdfiumOverlayTest
 
         private const int RENDER_DPI = 150;
 
-        private bool _autoOpenShownOnce = false; // NEU
+        private bool _autoOpenShownOnce = false;
+        private bool _isUpdatingPosition = false;
+
+        // NEU: Transaktionsdaten
+        private TransactionData? _transactionData;
+        private int _currentTransactionIndex = -1;
 
         private readonly Dictionary<Keys, (string Text, Color Color)> _tagMap = new()
         {
             { Keys.M, ("M", Color.FromArgb(220, 120, 0)) },
             { Keys.P, ("P", Color.FromArgb(0, 160, 80)) },
             { Keys.R, ("R", Color.FromArgb(200, 40, 40)) },
-
-            // Neue Tags hier ergänzen:
             { Keys.B, ("B", Color.FromArgb(0, 120, 220)) },
             { Keys.K, ("K", Color.FromArgb(80, 80, 80)) },
         };
@@ -46,7 +50,6 @@ namespace PdfiumOverlayTest
 
         public MainForm()
         {
-            // PDFium nur zur Laufzeit initialisieren (Designer crasht sonst)
             if (!IsInDesigner())
                 PDFium.FPDF_InitLibrary();
 
@@ -54,8 +57,9 @@ namespace PdfiumOverlayTest
             ClientSize = new Size(900, 700);
             StartPosition = FormStartPosition.CenterScreen;
             KeyPreview = true;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            MinimumSize = new Size(800, 600);
 
             _pdfViewerPanel = new Panel
             {
@@ -74,15 +78,14 @@ namespace PdfiumOverlayTest
                 SizeMode = PictureBoxSizeMode.AutoSize,
                 BackColor = Color.White,
                 TabStop = false,
-                Visible = false  // NEU: Initial unsichtbar
+                Visible = false
             };
             _pdfViewerPanel.Controls.Add(_pictureBox);
 
             _overlay = new TransparentOverlayForm
             {
-                Visible = false  // Bleibt unsichtbar bis PDF geladen
+                Visible = false
             };
-            // WICHTIG: Nicht Show() aufrufen beim Start!
 
             _btnLoad = new Button
             {
@@ -92,7 +95,7 @@ namespace PdfiumOverlayTest
                 TabStop = false
             };
             _btnLoad.Click += BtnLoad_Click;
-            Apply3DStyle(_btnLoad);     // << neu
+            Apply3DStyle(_btnLoad);
             Controls.Add(_btnLoad);
 
             _btnBurn = new Button
@@ -104,7 +107,7 @@ namespace PdfiumOverlayTest
                 TabStop = false
             };
             _btnBurn.Click += BtnBurn_Click;
-            Apply3DStyle(_btnBurn);     // << neu
+            Apply3DStyle(_btnBurn);
             Controls.Add(_btnBurn);
 
             _lblStatus = new Label
@@ -117,29 +120,170 @@ namespace PdfiumOverlayTest
             };
             Controls.Add(_lblStatus);
 
-            LocationChanged += (s, e) => PositionOverlay();
-            SizeChanged += (s, e) => PositionOverlay();
+            _overlay.Hide();
 
-            _overlay.Hide(); // Explizit verstecken
+            LoadWindowPosition();
+
+            this.LocationChanged += MainForm_LocationChanged;
+            this.SizeChanged += MainForm_SizeChanged;
+            this.FormClosing += MainForm_FormClosing;
+
+            CreateMainFormContextMenu();
+
+            _pdfViewerPanel.SizeChanged += (s, e) => PositionOverlay();
+        }
+
+        private ContextMenuStrip? _mainFormContextMenu;
+
+        private void CreateMainFormContextMenu()
+        {
+            _mainFormContextMenu = new ContextMenuStrip();
+
+            var resetPositionMenuItem = new ToolStripMenuItem("Fensterposition zurücksetzen", null, MainForm_ResetPosition);
+            resetPositionMenuItem.ShortcutKeys = Keys.Control | Keys.R;
+
+            _mainFormContextMenu.Items.Add(resetPositionMenuItem);
+
+            this.ContextMenuStrip = _mainFormContextMenu;
+        }
+
+        private void MainForm_ResetPosition(object? sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Möchten Sie die gespeicherten Fensterpositionen zurücksetzen?\n\n" +
+                "Die Fenster werden beim nächsten Start wieder in der Standard-Position angezeigt.",
+                "Position zurücksetzen",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                var settings = new WindowPositionSettings();
+                settings.Save();
+
+                MessageBox.Show("Fensterpositionen wurden zurückgesetzt.", "Erfolg",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void LoadWindowPosition()
+        {
+            var settings = WindowPositionSettings.Load();
+
+            if (settings.MainFormLocation.HasValue &&
+                WindowPositionSettings.IsLocationValid(settings.MainFormLocation.Value))
+            {
+                this.StartPosition = FormStartPosition.Manual;
+                this.Location = settings.MainFormLocation.Value;
+            }
+
+            if (settings.MainFormSize.HasValue)
+            {
+                this.Size = settings.MainFormSize.Value;
+            }
+        }
+
+        private void MainForm_LocationChanged(object? sender, EventArgs e)
+        {
+            if (_isUpdatingPosition) return;
+
+            _isUpdatingPosition = true;
+            try
+            {
+                if (this.WindowState == FormWindowState.Normal)
+                {
+                    SaveWindowPosition();
+                }
+                PositionOverlay();
+            }
+            finally
+            {
+                _isUpdatingPosition = false;
+            }
+        }
+
+        private void MainForm_SizeChanged(object? sender, EventArgs e)
+        {
+            if (_isUpdatingPosition) return;
+
+            _isUpdatingPosition = true;
+            try
+            {
+                if (this.WindowState == FormWindowState.Normal)
+                {
+                    SaveWindowPosition();
+                }
+                PositionOverlay();
+            }
+            finally
+            {
+                _isUpdatingPosition = false;
+            }
+        }
+
+        private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            SaveWindowPosition();
+        }
+
+        private void SaveWindowPosition()
+        {
+            if (this.WindowState != FormWindowState.Normal)
+                return;
+
+            var settings = WindowPositionSettings.Load();
+            settings.MainFormLocation = this.Location;
+            settings.MainFormSize = this.ClientSize;
+            settings.Save();
         }
 
         private void PositionOverlay()
         {
-            if (_overlay == null || !_overlay.Visible) return;
+            if (_overlay == null || !_overlay.Visible)
+            {
+                System.Diagnostics.Debug.WriteLine("PositionOverlay: Overlay nicht sichtbar oder null");
+                return;
+            }
 
-            var panelScreenPos = _pdfViewerPanel.PointToScreen(Point.Empty);
-            var pdfWidth = _pictureBox.Image?.Width ?? _pdfViewerPanel.ClientSize.Width;
-            var overlayWidth = (int)(pdfWidth * 0.8);
-            var overlayHeight = 60;
-            var pdfHeight = _pictureBox.Image?.Height ?? _pdfViewerPanel.ClientSize.Height;
-            var overlayX = panelScreenPos.X + (pdfWidth - overlayWidth) / 2;
-            var overlayY = panelScreenPos.Y + (int)(pdfHeight * 0.1);
+            try
+            {
+                var panelScreenPos = _pdfViewerPanel.PointToScreen(Point.Empty);
+                var pdfWidth = _pictureBox.Image?.Width ?? _pdfViewerPanel.ClientSize.Width;
+                var overlayWidth = (int)(pdfWidth * 0.8);
+                var overlayHeight = 60;
+                var pdfHeight = _pictureBox.Image?.Height ?? _pdfViewerPanel.ClientSize.Height;
 
-            _overlay.Size = new Size(overlayWidth, overlayHeight);
-            _overlay.Location = new Point(overlayX, overlayY);
+                overlayWidth = Math.Min(overlayWidth, _pdfViewerPanel.ClientSize.Width - 40);
+
+                var overlayX = panelScreenPos.X + (pdfWidth - overlayWidth) / 2;
+                var overlayY = panelScreenPos.Y + (int)(pdfHeight * 0.1);
+
+                bool needsUpdate = false;
+
+                if (_overlay.Size != new Size(overlayWidth, overlayHeight))
+                {
+                    _overlay.Size = new Size(overlayWidth, overlayHeight);
+                    needsUpdate = true;
+                }
+
+                if (_overlay.Location != new Point(overlayX, overlayY))
+                {
+                    _overlay.Location = new Point(overlayX, overlayY);
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Overlay repositioniert: X={overlayX}, Y={overlayY}");
+                    RepositionTagsToPanel();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fehler in PositionOverlay: {ex.Message}");
+            }
         }
 
-        // Diese Methode ist bereits korrekt - Tags im Viewer bleiben klein (25x22)
         private void CreateTagAtCurrentPosition(string text, Color color)
         {
             if (_overlay == null || !_overlay.Visible) return;
@@ -148,14 +292,23 @@ namespace PdfiumOverlayTest
             var pdfWidth = _pictureBox.Image?.Width ?? 0;
             if (pdfWidth == 0) return;
 
-            var tagX = panelScreenPos.X + pdfWidth - 80; // Abstand vom rechten Rand bleibt
+            var tagX = panelScreenPos.X + pdfWidth - 80;
             var tagY = _overlay.Top;
 
             var newTag = new TagOverlayForm();
 
-            // 20% kleiner gegenüber 72x52 -> 58x42
-            var w = 58;
-            var h = 42;
+            int w, h;
+            if (text.Length > 5)
+            {
+                w = Math.Min(200, text.Length * 12);
+                h = 50;
+            }
+            else
+            {
+                w = 58;
+                h = 42;
+            }
+
             newTag.MinimumSize = new Size(w, h);
             newTag.MaximumSize = new Size(w, h);
             newTag.SetBounds(tagX, tagY, w, h);
@@ -169,6 +322,34 @@ namespace PdfiumOverlayTest
             _tagOverlays.Add(newTag);
         }
 
+        private void RepositionTagsToPanel()
+        {
+            if (_tagOverlays.Count == 0 || _pictureBox.Image == null)
+                return;
+
+            var panelScreenPos = _pdfViewerPanel.PointToScreen(Point.Empty);
+            var pdfWidth = _pictureBox.Image.Width;
+
+            foreach (var tag in _tagOverlays.ToList())
+            {
+                if (tag == null || tag.IsDisposed)
+                    continue;
+
+                try
+                {
+                    var tagX = panelScreenPos.X + pdfWidth - 80;
+                    var relativeY = tag.Top - _overlay!.Top;
+                    var tagY = _overlay.Top + relativeY;
+
+                    tag.Location = new Point(tagX, tagY);
+                }
+                catch (ObjectDisposedException)
+                {
+                    continue;
+                }
+            }
+        }
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             if (_pdfDocument == IntPtr.Zero || _overlay == null || !_overlay.Visible)
@@ -180,6 +361,30 @@ namespace PdfiumOverlayTest
 
             switch (baseKey)
             {
+                case Keys.V:
+                    if (_transactionData != null && _transactionData.Transactions.Count > 0)
+                    {
+                        _currentTransactionIndex++;
+                        if (_currentTransactionIndex >= _transactionData.Transactions.Count)
+                            _currentTransactionIndex = 0;
+
+                        JumpToTransaction(_currentTransactionIndex);
+                        return true;
+                    }
+                    break;
+
+                case Keys.Z:
+                    if (_transactionData != null && _transactionData.Transactions.Count > 0)
+                    {
+                        _currentTransactionIndex--;
+                        if (_currentTransactionIndex < 0)
+                            _currentTransactionIndex = _transactionData.Transactions.Count - 1;
+
+                        JumpToTransaction(_currentTransactionIndex);
+                        return true;
+                    }
+                    break;
+
                 case Keys.Left:
                     if (hasShift)
                     {
@@ -256,7 +461,6 @@ namespace PdfiumOverlayTest
             base.OnKeyDown(e);
             if (_pdfDocument == IntPtr.Zero || _overlay == null || !_overlay.Visible) return;
 
-            // Generische Tag-Behandlung
             if (_tagMap.TryGetValue(e.KeyCode, out var tag))
             {
                 _overlay.SetTag(tag.Text, tag.Color);
@@ -289,17 +493,6 @@ namespace PdfiumOverlayTest
                     _overlay.Invalidate();
                     e.Handled = true;
                     break;
-                case Keys.Q:
-                    _overlay.Left = Math.Max(_pdfViewerPanel.PointToScreen(Point.Empty).X, _overlay.Left - 1);
-                    _overlay.Invalidate();
-                    e.Handled = true;
-                    break;
-                case Keys.E:
-                    _overlay.Left = Math.Min(_pdfViewerPanel.PointToScreen(Point.Empty).X + _pictureBox.Width - _overlay.Width, _overlay.Left + 1);
-                    _overlay.Invalidate();
-                    e.Handled = true;
-                    break;
-                // PageUp/PageDown usw. bleiben wie gehabt
             }
         }
 
@@ -350,13 +543,14 @@ namespace PdfiumOverlayTest
                         _ => $"Fehlercode: {error}"
                     };
 
-                    MessageBox.Show($"Fehler beim Laden der PDF-Datei.\n\n{errorMsg}\n\nStelle sicher, dass:\n- Die Datei eine gültige PDF ist\n- Die Datei nicht verschlüsselt ist\n- pdfium.dll im Ausgabeordner liegt",
-                        "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Fehler beim Laden der PDF-Datei.\n\n{errorMsg}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 _pageCount = PDFium.FPDF_GetPageCount(_pdfDocument);
                 _currentPageIndex = 0;
+
+                LoadOrAnalyzeTransactions();
 
                 if (!_overlay!.Visible)
                 {
@@ -366,35 +560,118 @@ namespace PdfiumOverlayTest
 
                 _btnBurn.Enabled = true;
                 RenderCurrentPage();
+
+                if (_transactionData != null && _transactionData.Transactions.Count > 0)
+                {
+                    _currentTransactionIndex = 0;
+                    JumpToTransaction(_currentTransactionIndex);
+                }
+
                 this.Focus();
-            }
-            catch (DllNotFoundException)
-            {
-                MessageBox.Show($"pdfium.dll nicht gefunden!\n\nBitte platziere pdfium.dll in:\n{AppDomain.CurrentDomain.BaseDirectory}",
-                    "DLL-Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Laden:\n{ex.GetType().Name}: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
-                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Fehler beim Laden:\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        protected override void OnShown(EventArgs e) // NEU
+        private void LoadOrAnalyzeTransactions()
         {
-            base.OnShown(e);
-            if (IsInDesigner()) return;
+            if (string.IsNullOrEmpty(_pdfFilePath))
+                return;
 
-            if (_autoOpenShownOnce) return;
-            _autoOpenShownOnce = true;
+            _transactionData = TransactionData.Load(_pdfFilePath);
 
-            // nach dem Shown-Event asynchron öffnen, damit das Fenster bereits steht
-            BeginInvoke(new Action(() =>
+            if (_transactionData == null)
             {
-                BtnLoad_Click(this, EventArgs.Empty);
-                if (_pdfDocument == IntPtr.Zero) // Abbruch oder Fehler -> zurück ins Startfenster
-                    Close();
-            }));
+                var result = MessageBox.Show(
+                    "Diese PDF wurde noch nicht analysiert.\n\n" +
+                    "Möchten Sie jetzt die Kontobewegungen automatisch erkennen lassen?\n\n" +
+                    "Dies kann einige Sekunden dauern.",
+                    "PDF analysieren",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    AnalyzeTransactions();
+                }
+            }
+        }
+
+        private void AnalyzeTransactions()
+        {
+            if (_pdfDocument == IntPtr.Zero || string.IsNullOrEmpty(_pdfFilePath))
+                return;
+
+            try
+            {
+                var progressForm = new Form
+                {
+                    Text = "Analysiere PDF...",
+                    Size = new Size(400, 100),
+                    StartPosition = FormStartPosition.CenterParent,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MaximizeBox = false,
+                    MinimizeBox = false
+                };
+
+                var label = new Label
+                {
+                    Text = "Bitte warten, PDF wird analysiert...",
+                    AutoSize = true,
+                    Location = new Point(20, 30)
+                };
+                progressForm.Controls.Add(label);
+
+                progressForm.Show(this);
+                Application.DoEvents();
+
+                _transactionData = TransactionParser.ParsePdf(_pdfFilePath, _pdfDocument, _pageCount);
+                _transactionData.Save(_pdfFilePath);
+
+                progressForm.Close();
+
+                MessageBox.Show(
+                    $"Analyse abgeschlossen!\n\n" +
+                    $"{_transactionData.Transactions.Count} Kontobewegungen wurden erkannt.\n\n" +
+                    $"Verwenden Sie:\n" +
+                    $"• V = Vorwärts zur nächsten Position\n" +
+                    $"• Z = Zurück zur vorherigen Position",
+                    "Analyse erfolgreich",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler bei der Analyse:\n{ex.Message}", "Analysefehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void JumpToTransaction(int transactionIndex)
+        {
+            if (_transactionData == null ||
+                transactionIndex < 0 ||
+                transactionIndex >= _transactionData.Transactions.Count ||
+                _overlay == null)
+                return;
+
+            var transaction = _transactionData.Transactions[transactionIndex];
+
+            if (transaction.PageIndex != _currentPageIndex)
+            {
+                _currentPageIndex = transaction.PageIndex;
+                RenderCurrentPage();
+            }
+
+            var panelScreenPos = _pdfViewerPanel.PointToScreen(Point.Empty);
+
+            _overlay.Left = panelScreenPos.X + transaction.X;
+            _overlay.Top = panelScreenPos.Y + transaction.Y;
+
+            _overlay.Invalidate();
+
+            UpdateStatus();
         }
 
         private void RenderCurrentPage()
@@ -444,7 +721,7 @@ namespace PdfiumOverlayTest
                 _pictureBox.Image?.Dispose();
                 _pictureBox.Image = new Bitmap(_renderedPageBitmap);
                 _pictureBox.Size = _renderedPageBitmap.Size;
-                _pictureBox.Visible = true; // NEU: Jetzt sichtbar machen
+                _pictureBox.Visible = true;
 
                 var screenArea = Screen.PrimaryScreen!.WorkingArea;
                 var formWidth = Math.Min(width + 40, screenArea.Width - 100);
@@ -452,7 +729,6 @@ namespace PdfiumOverlayTest
 
                 this.ClientSize = new Size(formWidth, formHeight);
                 _pdfViewerPanel.Size = new Size(formWidth - 20, formHeight - 60);
-                this.CenterToScreen();
 
                 UpdateStatus();
                 PositionOverlay();
@@ -467,7 +743,6 @@ namespace PdfiumOverlayTest
         {
             if (_renderedPageBitmap == null || _pdfDocument == IntPtr.Zero || string.IsNullOrEmpty(_pdfFilePath) || _overlay == null) return;
 
-            // Finde nächste verfügbare Nummer für _markiertX
             string baseFileName = Path.GetFileNameWithoutExtension(_pdfFilePath);
             string directory = Path.GetDirectoryName(_pdfFilePath) ?? "";
             int counter = 1;
@@ -491,27 +766,100 @@ namespace PdfiumOverlayTest
 
             try
             {
-                // Erstelle markiertes Bild
                 using var resultBitmap = new Bitmap(_renderedPageBitmap);
                 using (var g = Graphics.FromImage(resultBitmap))
                 {
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
                     var panelScreenPos = _pdfViewerPanel.PointToScreen(Point.Empty);
 
-                    // Zeichne ALLE gesetzten Tags
+                    // Zeichne das Haupt-Overlay (gelbes Rechteck)
+                    if (_overlay.Visible)
+                    {
+                        var overlayX = _overlay.Left - panelScreenPos.X;
+                        var overlayY = _overlay.Top - panelScreenPos.Y;
+                        var overlayWidth = _overlay.Width;
+                        var overlayHeight = _overlay.Height;
+
+                        // Prüfe ob das Overlay im sichtbaren Bereich liegt
+                        if (overlayX >= -overlayWidth && overlayY >= -overlayHeight && 
+                            overlayX < resultBitmap.Width && overlayY < resultBitmap.Height)
+                        {
+                            // Clip-Bereich berechnen
+                            int drawX = Math.Max(0, overlayX);
+                            int drawY = Math.Max(0, overlayY);
+                            int drawWidth = Math.Min(overlayWidth, resultBitmap.Width - drawX);
+                            int drawHeight = Math.Min(overlayHeight, resultBitmap.Height - drawY);
+
+                            if (drawWidth > 0 && drawHeight > 0)
+                            {
+                                // Zeichne das halbtransparente gelbe Rechteck
+                                using (var overlayBrush = new SolidBrush(Color.FromArgb(120, _overlay.FillColor)))
+                                {
+                                    g.FillRectangle(overlayBrush, overlayX, overlayY, overlayWidth, overlayHeight);
+                                }
+
+                                // Zeichne den schwarzen Rahmen
+                                using (var pen = new Pen(Color.FromArgb(200, Color.Black), 3))
+                                {
+                                    g.DrawRectangle(pen, overlayX, overlayY, overlayWidth - 1, overlayHeight - 1);
+                                }
+
+                                // Zeichne den Text im Overlay (falls vorhanden)
+                                // KORRIGIERT: Verwende CurrentText statt TagText
+                                if (!string.IsNullOrEmpty(_overlay.CurrentText))
+                                {
+                                    float fontSize = _overlay.CurrentText.Length > 5 ? 14F : 18F;
+                                    
+                                    using (var font = new Font("Arial", fontSize, FontStyle.Bold))
+                                    using (var textBrush = new SolidBrush(Color.FromArgb(220, Color.White)))
+                                    using (var sf = new StringFormat
+                                    {
+                                        Alignment = StringAlignment.Center,
+                                        LineAlignment = StringAlignment.Center
+                                    })
+                                    {
+                                        g.DrawString(_overlay.CurrentText, font, textBrush,
+                                            new RectangleF(overlayX, overlayY, overlayWidth, overlayHeight), sf);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Zeichne die Tag-Overlays (M, P, R, B, K)
                     foreach (var tag in _tagOverlays)
                     {
                         if (string.IsNullOrEmpty(tag.TagText)) continue;
 
-                        // GEÄNDERT: Ca. 3x so groß wie im Viewer (75x66 statt 25x22)
-                        var tagWidth = 300;
-                        var tagHeight = 264;
+                        int tagWidth, tagHeight;
+                        float fontSize;
+
+                        if (tag.TagText.Length > 5)
+                        {
+                            tagWidth = Math.Min(800, tag.TagText.Length * 40);
+                            tagHeight = 200;
+                            fontSize = 40;
+                        }
+                        else if (tag.TagText.Length > 1)
+                        {
+                            tagWidth = 300;
+                            tagHeight = 264;
+                            fontSize = 96;
+                        }
+                        else
+                        {
+                            tagWidth = 300;
+                            tagHeight = 264;
+                            fontSize = 96;
+                        }
 
                         var tagX = tag.Left - panelScreenPos.X;
                         var tagY = tag.Top - panelScreenPos.Y;
 
-                        if (tagX < 0 || tagY < 0 || tagX > resultBitmap.Width || tagY > resultBitmap.Height)
+                        if (tagX < -tagWidth || tagY < -tagHeight || 
+                            tagX > resultBitmap.Width || tagY > resultBitmap.Height)
                             continue;
 
                         using (var tagBrush = new SolidBrush(tag.TagColor))
@@ -519,17 +867,17 @@ namespace PdfiumOverlayTest
                             g.FillRectangle(tagBrush, tagX, tagY, tagWidth, tagHeight);
                         }
 
-                        using (var pen = new Pen(Color.Black, 3)) // Dickerer Rahmen
+                        using (var pen = new Pen(Color.Black, 3))
                         {
                             g.DrawRectangle(pen, tagX, tagY, tagWidth - 1, tagHeight - 1);
                         }
 
-                        // GEÄNDERT: Größere Schrift für die PDF (24pt statt 8pt)
-                        using (var font = new Font("Arial", 96, FontStyle.Bold)) // 24 * (300/75) ≈ 96
+                        using (var font = new Font("Arial", fontSize, FontStyle.Bold))
                         using (var sf = new StringFormat
                         {
                             Alignment = StringAlignment.Center,
-                            LineAlignment = StringAlignment.Center
+                            LineAlignment = StringAlignment.Center,
+                            Trimming = StringTrimming.EllipsisCharacter
                         })
                         {
                             g.DrawString(tag.TagText, font, Brushes.White,
@@ -538,7 +886,6 @@ namespace PdfiumOverlayTest
                     }
                 }
 
-                // Speichere als PDF mit PdfSharp
                 SaveMarkedPageAsPdf(resultBitmap, sfd.FileName);
 
                 MessageBox.Show($"Erfolgreich als PDF gespeichert:\n{sfd.FileName}",
@@ -546,44 +893,38 @@ namespace PdfiumOverlayTest
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Speichern: {ex.Message}\n\n{ex.StackTrace}", "Fehler",
+                MessageBox.Show($"Fehler beim Speichern: {ex.Message}", "Fehler",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // NEU: Speichere markierte Seite als PDF
         private void SaveMarkedPageAsPdf(Bitmap markedImage, string outputPdfPath)
         {
             try
             {
-                // Öffne Original-PDF
                 PdfDocument inputDocument = PdfReader.Open(_pdfFilePath!, PdfDocumentOpenMode.Import);
                 PdfDocument outputDocument = new PdfDocument();
 
-                // Kopiere alle Seiten
                 for (int i = 0; i < inputDocument.PageCount; i++)
                 {
                     if (i == _currentPageIndex)
                     {
-                        // Erstelle neue Seite mit markiertem Bild
                         PdfPage page = outputDocument.AddPage();
-                        
-                        // Übernehme Größe von Original-Seite
+
                         PdfPage originalPage = inputDocument.Pages[i];
                         page.Width = XUnit.FromPoint(originalPage.Width.Point);
                         page.Height = XUnit.FromPoint(originalPage.Height.Point);
 
                         using (XGraphics gfx = XGraphics.FromPdfPage(page))
                         {
-                            // Speichere Bild temporär
                             string tempImage = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
                             try
                             {
                                 markedImage.Save(tempImage, ImageFormat.Png);
-                                
-                                // Zeichne Bild auf PDF-Seite
+
                                 XImage image = XImage.FromFile(tempImage);
                                 gfx.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
+                                image.Dispose();
                             }
                             finally
                             {
@@ -594,12 +935,10 @@ namespace PdfiumOverlayTest
                     }
                     else
                     {
-                        // Kopiere unveränderte Seite
                         outputDocument.AddPage(inputDocument.Pages[i]);
                     }
                 }
 
-                // Speichere PDF
                 outputDocument.Save(outputPdfPath);
                 outputDocument.Close();
                 inputDocument.Close();
@@ -610,29 +949,6 @@ namespace PdfiumOverlayTest
             }
         }
 
-        // NEU: Erstelle einseitige PDF aus Bitmap (Workaround da PDFium keine Bearbeitung unterstützt)
-        private void CreateSinglePagePdf(Bitmap image, string pdfPath)
-        {
-            // Einfacher Workaround: Speichere als hochqualitativos PNG und
-            // benenne es als PDF (für echte PDF-Erstellung würde man iTextSharp/PdfSharp brauchen)
-            
-            // Bessere Lösung: Nutze System.Drawing.Printing für PDF-Export
-            string tempPng = pdfPath + ".temp.png";
-            image.Save(tempPng, ImageFormat.Png);
-            
-            // Da PDFium keine PDF-Erstellung unterstützt, müsste hier eine andere Bibliothek verwendet werden
-            // Für jetzt: Kopiere Original und zeige Warnung
-            File.Copy(_pdfFilePath!, pdfPath, true);
-            
-            if (File.Exists(tempPng))
-                File.Delete(tempPng);
-            
-            // TODO: Für echte PDF-Bearbeitung würde man benötigen:
-            // - iTextSharp / iText7
-            // - PdfSharp
-            // - oder PDFBox (Java)
-        }
-
         private void UpdateStatus()
         {
             if (_pdfDocument == IntPtr.Zero)
@@ -641,8 +957,13 @@ namespace PdfiumOverlayTest
                 return;
             }
 
-            _lblStatus.Text = $"Seite {_currentPageIndex + 1}/{_pageCount} | " +
-                              $"DPI: {RENDER_DPI} | " +
+            string transactionInfo = "";
+            if (_transactionData != null && _transactionData.Transactions.Count > 0)
+            {
+                transactionInfo = $" | Position {_currentTransactionIndex + 1}/{_transactionData.Transactions.Count} | V=Vor Z=Zurück";
+            }
+
+            _lblStatus.Text = $"Seite {_currentPageIndex + 1}/{_pageCount}{transactionInfo} | " +
                               $"Shortcuts: ←↑→↓ (bewegen), Shift+←→ (Breite), W/S (Höhe), M/P/R (Tags)";
         }
 
@@ -676,20 +997,19 @@ namespace PdfiumOverlayTest
             base.Dispose(disposing);
         }
 
-        // Füge diese Methode in die Klasse MainForm ein (z.B. unter den anderen Methoden)
         private void Apply3DStyle(Button b)
         {
             bool pressed = false;
 
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 0;        // Rahmen zeichnen wir selbst
+            b.FlatAppearance.BorderSize = 0;
             b.UseVisualStyleBackColor = false;
             b.BackColor = Color.FromArgb(235, 235, 235);
             b.ForeColor = Color.Black;
 
             b.MouseDown += (s, e) => { pressed = true; b.Invalidate(); };
-            b.MouseUp   += (s, e) => { pressed = false; b.Invalidate(); };
-            b.Leave     += (s, e) => { pressed = false; b.Invalidate(); };
+            b.MouseUp += (s, e) => { pressed = false; b.Invalidate(); };
+            b.Leave += (s, e) => { pressed = false; b.Invalidate(); };
 
             b.Paint += (s, e) =>
             {
@@ -702,52 +1022,98 @@ namespace PdfiumOverlayTest
                     pressed ? Border3DStyle.Sunken : Border3DStyle.Raised);
             };
         }
-    }
 
-    internal static class PDFium
-    {
-        private const string DllName = "pdfium.dll";
+        private CustomTextHistory _customTextHistory = CustomTextHistory.Load();
+        private bool _hasUsedCustomTextBefore = false;
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDF_InitLibrary();
+        public void PlaceTagFromCategory(CategoriesForm.TagItem tagItem)
+        {
+            if (_overlay == null || !_overlay.Visible)
+            {
+                MessageBox.Show("Bitte laden Sie zuerst ein PDF.", "Kein PDF geladen",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-        [DllImport(DllName, CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr FPDF_LoadDocument(string filePath, string? password);
+            string character = tagItem.Character;
+            Color color = tagItem.Color;
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr FPDF_LoadMemDocument(IntPtr dataBuffer, int size, string? password);
+            if (tagItem.IsCustomText)
+            {
+                string? customText = null;
+                bool isFirstTime = !_hasUsedCustomTextBefore;
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern uint FPDF_GetLastError();
+                if (!isFirstTime && _customTextHistory.ReuseLastText && !string.IsNullOrEmpty(_customTextHistory.LastUsedText))
+                {
+                    var result = MessageBox.Show(
+                        $"Möchten Sie den zuletzt verwendeten Text wiederverwenden?\n\n" +
+                        $"Letzter Text: \"{_customTextHistory.LastUsedText}\"\n\n" +
+                        $"Ja = Text wiederverwenden\n" +
+                        $"Nein = Neuen Text eingeben\n" +
+                        $"Abbrechen = Vorgang abbrechen",
+                        "Text wiederverwenden?",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDF_CloseDocument(IntPtr document);
+                    if (result == DialogResult.Cancel)
+                    {
+                        this.Focus();
+                        return;
+                    }
+                    else if (result == DialogResult.Yes)
+                    {
+                        customText = _customTextHistory.LastUsedText;
+                    }
+                }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int FPDF_GetPageCount(IntPtr document);
+                if (customText == null)
+                {
+                    using var dialog = new CustomTextDialog(isFirstTime, _customTextHistory.LastUsedText);
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr FPDF_LoadPage(IntPtr document, int pageIndex);
+                    if (dialog.ShowDialog(this) == DialogResult.OK)
+                    {
+                        customText = dialog.CustomText;
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDF_ClosePage(IntPtr page);
+                        if (string.IsNullOrWhiteSpace(customText))
+                        {
+                            MessageBox.Show("Bitte geben Sie einen Text ein.", "Kein Text",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            this.Focus();
+                            return;
+                        }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern double FPDF_GetPageWidth(IntPtr page);
+                        if (customText.Length > CustomTextDialog.MaxCharacters)
+                        {
+                            customText = customText.Substring(0, CustomTextDialog.MaxCharacters);
+                        }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern double FPDF_GetPageHeight(IntPtr page);
+                        customText = customText.Trim();
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr FPDFBitmap_CreateEx(int width, int height, int format, IntPtr firstScan, int stride);
+                        if (string.IsNullOrEmpty(customText))
+                        {
+                            MessageBox.Show("Der Text darf nicht nur aus Leerzeichen bestehen.",
+                                "Ungültiger Text", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            this.Focus();
+                            return;
+                        }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDFBitmap_FillRect(IntPtr bitmap, int left, int top, int width, int height, uint color);
+                        _customTextHistory.AddText(customText);
+                        _customTextHistory.SetReusePreference(dialog.RememberChoice, customText);
+                        _hasUsedCustomTextBefore = true;
+                    }
+                    else
+                    {
+                        this.Focus();
+                        return;
+                    }
+                }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDF_RenderPageBitmap(IntPtr bitmap, IntPtr page, int startX, int startY, int sizeX, int sizeY, int rotate, int flags);
+                character = customText!;
+            }
 
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void FPDFBitmap_Destroy(IntPtr bitmap);
+            _overlay.SetTag(character, color);
+            CreateTagAtCurrentPosition(character, color);
+            this.Focus();
+        }
     }
 }

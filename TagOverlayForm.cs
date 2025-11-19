@@ -94,6 +94,7 @@ namespace PdfiumOverlayTest
                 {
                     g.Clear(Color.Transparent);
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias; // NEU: Bessere Textdarstellung
 
                     using (var tagBrush = new SolidBrush(TagColor))
                         g.FillRectangle(tagBrush, 0, 0, Width, Height);
@@ -103,8 +104,24 @@ namespace PdfiumOverlayTest
 
                     if (!string.IsNullOrEmpty(TagText))
                     {
-                        using var font = new Font("Arial", 23, FontStyle.Bold);
-                        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        // NEU: Dynamische Schriftgröße basierend auf Textlänge
+                        float fontSize;
+                        if (TagText.Length > 20)
+                            fontSize = 10; // Sehr lange Texte (Freier Text)
+                        else if (TagText.Length > 5)
+                            fontSize = 14; // Mittlere Texte
+                        else if (TagText.Length > 1)
+                            fontSize = 18; // Kurze Texte (2-5 Zeichen)
+                        else
+                            fontSize = 23; // Einzelne Buchstaben (normale Tags)
+
+                        using var font = new Font("Arial", fontSize, FontStyle.Bold);
+                        using var sf = new StringFormat
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center,
+                            Trimming = StringTrimming.EllipsisCharacter // NEU: Zeige "..." wenn zu lang
+                        };
                         g.DrawString(TagText, font, Brushes.White, new RectangleF(0, 0, Width, Height), sf);
                     }
                 }

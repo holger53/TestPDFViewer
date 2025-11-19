@@ -11,9 +11,8 @@ namespace PdfiumOverlayTest
         private static bool IsInDesigner() =>
             LicenseManager.UsageMode == LicenseUsageMode.Designtime;
 
-        // Farben
-        private readonly Color _panelBackColor = Color.FromArgb(160, 215, 232, 255); // Pastell-Blau
-        private readonly Color _btnBackColor   = Color.FromArgb(235, 235, 235);      // leichtes Grau
+        private readonly Color _panelBackColor = Color.FromArgb(160, 215, 232, 255);
+        private readonly Color _btnBackColor   = Color.FromArgb(235, 235, 235);
 
         public StartForm()
         {
@@ -22,8 +21,7 @@ namespace PdfiumOverlayTest
             if (IsInDesigner())
                 return;
 
-            // Event-Handler (werden in Designer bereits gesetzt, aber zur Sicherheit)
-            _btnStartTags.Click -= BtnStartTags_Click;    // doppelte Handler vermeiden
+            _btnStartTags.Click -= BtnStartTags_Click;
             _btnStartTags.Click += BtnStartTags_Click;
             _btnCategories.Click -= BtnCategories_Click;
             _btnCategories.Click += BtnCategories_Click;
@@ -33,6 +31,7 @@ namespace PdfiumOverlayTest
             Apply3DStyle(_btnStartTags);
             Apply3DStyle(_btnCategories);
             Apply3DStyle(_btnExit);
+            Apply3DStyle(_btnCompanyData);
 
             this.SizeChanged += RecenterButtonsPanel;
             TryLoadBackgroundImage();
@@ -50,15 +49,96 @@ namespace PdfiumOverlayTest
         private void BtnStartTags_Click(object? sender, EventArgs e)
         {
             Hide();
-            try
+            
+            var mainForm = new MainForm();
+            var categoriesForm = new CategoriesForm();
+
+            bool isClosingForms = false;
+
+            var settings = WindowPositionSettings.Load();
+
+            mainForm.StartPosition = FormStartPosition.Manual;
+            categoriesForm.StartPosition = FormStartPosition.Manual;
+
+            var screenArea = Screen.PrimaryScreen!.WorkingArea;
+
+            if (!settings.CategoriesFormLocation.HasValue || 
+                !WindowPositionSettings.IsLocationValid(settings.CategoriesFormLocation.Value))
             {
-                using var main = new MainForm();
-                main.ShowDialog(this);
+                var categoriesWidth = 450;
+                var spacing = 20;
+                var totalWidth = categoriesWidth + spacing + mainForm.Width;
+                var startX = Math.Max(10, (screenArea.Width - totalWidth) / 2);
+                
+                var categoriesX = startX;
+                var mainFormX = categoriesX + categoriesWidth + spacing;
+                var centerY = Math.Max(10, (screenArea.Height - mainForm.Height) / 2);
+                
+                categoriesForm.Location = new Point(categoriesX, centerY);
+                categoriesForm.ClientSize = new Size(categoriesWidth, 600);
+                mainForm.Location = new Point(mainFormX, centerY);
+                
+                settings.CategoriesFormLocation = categoriesForm.Location;
+                settings.CategoriesFormSize = categoriesForm.ClientSize;
+                settings.MainFormLocation = mainForm.Location;
+                settings.MainFormSize = mainForm.ClientSize;
+                settings.Save();
             }
-            finally
+            else
             {
-                Show();
+                categoriesForm.Location = settings.CategoriesFormLocation.Value;
+                if (settings.CategoriesFormSize.HasValue)
+                    categoriesForm.ClientSize = settings.CategoriesFormSize.Value;
+                
+                if (settings.MainFormLocation.HasValue && 
+                    WindowPositionSettings.IsLocationValid(settings.MainFormLocation.Value))
+                {
+                    mainForm.Location = settings.MainFormLocation.Value;
+                }
+                else
+                {
+                    mainForm.Location = new Point(
+                        (screenArea.Width - mainForm.Width) / 2,
+                        (screenArea.Height - mainForm.Height) / 2);
+                }
+                
+                if (settings.MainFormSize.HasValue)
+                    mainForm.ClientSize = settings.MainFormSize.Value;
             }
+
+            categoriesForm.TagDoubleClicked += (s, tagItem) =>
+            {
+                mainForm?.PlaceTagFromCategory(tagItem);
+                mainForm?.Activate();
+            };
+            
+            categoriesForm.TagClicked += (s, tagItem) =>
+            {
+                mainForm?.PlaceTagFromCategory(tagItem);
+                mainForm?.Activate();
+            };
+
+            categoriesForm.Show();
+            mainForm.Show();
+            
+            mainForm.FormClosed += (s, ev) =>
+            {
+                if (!isClosingForms)
+                {
+                    isClosingForms = true;
+                    categoriesForm.Close();
+                    Show();
+                }
+            };
+            
+            categoriesForm.FormClosed += (s, ev) =>
+            {
+                if (!isClosingForms && !mainForm.IsDisposed)
+                {
+                    isClosingForms = true;
+                    mainForm.Close();
+                }
+            };
         }
 
         private void BtnCategories_Click(object? sender, EventArgs e)
@@ -129,6 +209,66 @@ namespace PdfiumOverlayTest
                     rect,
                     pressed ? Border3DStyle.Sunken : Border3DStyle.Raised);
             };
+        }
+
+        private void BtnCompanyData_Click(object? sender, EventArgs e)
+        {
+            var companyData = LoadCompanyData();
+            
+            using var dlg = new CompanyDataDialog
+            {
+                CompanyData = companyData
+            };
+            
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                SaveCompanyData(dlg.CompanyData);
+                MessageBox.Show("Firmendaten wurden erfolgreich gespeichert.", "Erfolg", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private CompanyData LoadCompanyData()
+        {
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "companydata.json");
+            
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    var json = File.ReadAllText(filePath);
+                    var data = System.Text.Json.JsonSerializer.Deserialize<CompanyData>(json);
+                    if (data != null)
+                        return data;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Laden der Firmendaten:\n{ex.Message}", 
+                    "Ladefehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            
+            return new CompanyData();
+        }
+
+        private void SaveCompanyData(CompanyData data)
+        {
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "companydata.json");
+            
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    WriteIndented = true 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(data, options);
+                File.WriteAllText(filePath, json);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Speichern der Firmendaten:\n{ex.Message}", 
+                    "Speicherfehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

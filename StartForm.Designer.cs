@@ -17,10 +17,11 @@ namespace PdfiumOverlayTest
             base.Dispose(disposing);
         }
 
-        // FELDER - diese müssen hier deklariert sein
+        // FELDER
         private Panel _buttonsPanel;
         private Button _btnStartTags;
         private Button _btnCategories;
+        private Button _btnCompanyData;  // NEU: Firmendaten-Button
         private Button _btnExit;
 
         private void InitializeComponent()
@@ -28,6 +29,7 @@ namespace PdfiumOverlayTest
             _buttonsPanel = new Panel();
             _btnStartTags = new Button();
             _btnCategories = new Button();
+            _btnCompanyData = new Button();  // NEU
             _btnExit = new Button();
             _buttonsPanel.SuspendLayout();
             SuspendLayout();
@@ -38,13 +40,14 @@ namespace PdfiumOverlayTest
             _buttonsPanel.BackColor = Color.FromArgb(160, 215, 232, 255);
             _buttonsPanel.Controls.Add(_btnStartTags);
             _buttonsPanel.Controls.Add(_btnCategories);
+            _buttonsPanel.Controls.Add(_btnCompanyData);  // NEU: Button zum Panel hinzufügen
             _buttonsPanel.Controls.Add(_btnExit);
             _buttonsPanel.Location = new Point(78, 664);
             _buttonsPanel.Name = "_buttonsPanel";
-            _buttonsPanel.Size = new Size(1000, 80);
+            _buttonsPanel.Size = new Size(1000, 140);  // GEÄNDERT: Höher für 2 Zeilen
             _buttonsPanel.TabIndex = 0;
             // 
-            // _btnStartTags
+            // _btnStartTags (ERSTE ZEILE)
             // 
             _btnStartTags.BackColor = Color.FromArgb(235, 235, 235);
             _btnStartTags.FlatStyle = FlatStyle.Flat;
@@ -57,7 +60,7 @@ namespace PdfiumOverlayTest
             _btnStartTags.UseVisualStyleBackColor = false;
             _btnStartTags.Click += BtnStartTags_Click;
             // 
-            // _btnCategories
+            // _btnCategories (ERSTE ZEILE)
             // 
             _btnCategories.BackColor = Color.FromArgb(235, 235, 235);
             _btnCategories.FlatStyle = FlatStyle.Flat;
@@ -70,7 +73,20 @@ namespace PdfiumOverlayTest
             _btnCategories.UseVisualStyleBackColor = false;
             _btnCategories.Click += BtnCategories_Click;
             // 
-            // _btnExit
+            // _btnCompanyData (ZWEITE ZEILE - NEU)
+            // 
+            _btnCompanyData.BackColor = Color.FromArgb(235, 235, 235);
+            _btnCompanyData.FlatStyle = FlatStyle.Flat;
+            _btnCompanyData.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            _btnCompanyData.Location = new Point(30, 76);  // KORRIGIERT: Zweite Zeile
+            _btnCompanyData.Name = "_btnCompanyData";
+            _btnCompanyData.Size = new Size(610, 48);  // KORRIGIERT: Breiter (über 2 Spalten)
+            _btnCompanyData.TabIndex = 2;
+            _btnCompanyData.Text = "Firmen-/Personendaten";
+            _btnCompanyData.UseVisualStyleBackColor = false;
+            _btnCompanyData.Click += BtnCompanyData_Click;
+            // 
+            // _btnExit (ERSTE ZEILE)
             // 
             _btnExit.BackColor = Color.FromArgb(235, 235, 235);
             _btnExit.FlatStyle = FlatStyle.Flat;
@@ -78,7 +94,7 @@ namespace PdfiumOverlayTest
             _btnExit.Location = new Point(690, 16);
             _btnExit.Name = "_btnExit";
             _btnExit.Size = new Size(280, 48);
-            _btnExit.TabIndex = 2;
+            _btnExit.TabIndex = 3;
             _btnExit.Text = "Beenden";
             _btnExit.UseVisualStyleBackColor = false;
             _btnExit.Click += BtnExit_Click;
