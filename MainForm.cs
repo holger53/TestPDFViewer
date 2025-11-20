@@ -131,6 +131,9 @@ namespace PdfiumOverlayTest
             CreateMainFormContextMenu();
 
             _pdfViewerPanel.SizeChanged += (s, e) => PositionOverlay();
+
+            // WICHTIG: MainForm immer im Vordergrund halten
+            this.TopMost = false; // Wird in StartForm gesetzt
         }
 
         private ContextMenuStrip? _mainFormContextMenu;
@@ -142,9 +145,22 @@ namespace PdfiumOverlayTest
             var resetPositionMenuItem = new ToolStripMenuItem("Fensterposition zurücksetzen", null, MainForm_ResetPosition);
             resetPositionMenuItem.ShortcutKeys = Keys.Control | Keys.R;
 
+            // NEU: Beenden-Menüpunkt hinzufügen
+            var exitMenuItem = new ToolStripMenuItem("Anwendung beenden", null, MainForm_Exit);
+            exitMenuItem.ShortcutKeys = Keys.Alt | Keys.F4;
+
             _mainFormContextMenu.Items.Add(resetPositionMenuItem);
+            _mainFormContextMenu.Items.Add(new ToolStripSeparator()); // Trennlinie
+            _mainFormContextMenu.Items.Add(exitMenuItem); // NEU
 
             this.ContextMenuStrip = _mainFormContextMenu;
+        }
+
+        // NEU: Methode zum Beenden der Anwendung (nach MainForm_ResetPosition, Zeile 175):
+        private void MainForm_Exit(object? sender, EventArgs e)
+        {
+            // KEIN Dialog mehr - einfach beenden
+            Application.Exit();
         }
 
         private void MainForm_ResetPosition(object? sender, EventArgs e)
@@ -223,6 +239,32 @@ namespace PdfiumOverlayTest
 
         private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
+            // NEU: Prüfe ob das Fenster zwangsweise geschlossen wird
+            if (this.Tag?.ToString() == "ForceClosing")
+            {
+                SaveWindowPosition();
+                return;
+            }
+
+            // VEREINFACHT: Nur noch 2 Optionen
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                var result = MessageBox.Show(
+                    "Anwendung beenden?",
+                    "Beenden",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.No)
+                {
+                    e.Cancel = true; // NICHT beenden
+                    return;
+                }
+                
+                // Bei "Ja" → Beenden
+                Application.Exit();
+            }
+
             SaveWindowPosition();
         }
 
@@ -1114,6 +1156,26 @@ namespace PdfiumOverlayTest
             _overlay.SetTag(character, color);
             CreateTagAtCurrentPosition(character, color);
             this.Focus();
+        }
+
+        // NOTFALL-BEENDEN: Strg + Shift + Q
+        private void MainForm_EmergencyExit(object? sender, KeyEventArgs e)
+        {
+            // Notfall-Beenden mit Strg + Shift + Q
+            if (e.Control && e.Shift && e.KeyCode == Keys.Q)
+            {
+                Application.Exit();
+                e.Handled = true;
+            }
+            
+            // Oder: Fenster in den Vordergrund bringen mit Strg + Shift + F
+            if (e.Control && e.Shift && e.KeyCode == Keys.F)
+            {
+                this.BringToFront();
+                this.Activate();
+                this.Focus();
+                e.Handled = true;
+            }
         }
     }
 }

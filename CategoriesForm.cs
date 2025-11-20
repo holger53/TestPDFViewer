@@ -71,7 +71,7 @@ namespace PdfiumOverlayTest
                 return;
             
             // NEU: Aktiviere freie Positionierung
-            this.FormBorderStyle = FormBorderStyle.Sizable; // Oder FormBorderStyle.FixedSingle
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.Manual;
             
             // NEU: Optimale Größe

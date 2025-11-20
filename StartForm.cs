@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Linq;  // ← WICHTIG: Für .Cast<Form>() und .ToList()
 using System.Windows.Forms;
 
 namespace PdfiumOverlayTest
@@ -34,7 +35,49 @@ namespace PdfiumOverlayTest
             Apply3DStyle(_btnCompanyData);
 
             this.SizeChanged += RecenterButtonsPanel;
+            
+            // NEU: FormClosing-Event hinzufügen
+            this.FormClosing += StartForm_FormClosing;
+            
             TryLoadBackgroundImage();
+        }
+
+        // KORRIGIERT: Event-Handler zum Schließen aller Fenster
+        private void StartForm_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            // Wenn die Anwendung beendet wird, zwinge alle Fenster zu schließen
+            if (!e.Cancel)
+            {
+                // Hole alle offenen Fenster als Liste
+                var openForms = Application.OpenForms.Cast<Form>().ToList();
+                
+                foreach (Form openForm in openForms)
+                {
+                    if (openForm != this && !openForm.IsDisposed)
+                    {
+                        try
+                        {
+                            // WICHTIG: Verhindere, dass das Fenster sein FormClosing-Event verarbeitet
+                            // Setze eine Eigenschaft, die das Fenster als "wird geschlossen" markiert
+                            openForm.Tag = "ForceClosing";
+                            
+                            // Schließe das Fenster
+                            openForm.Close();
+                            
+                            // Falls Close() nicht funktioniert hat, forciere Dispose
+                            if (!openForm.IsDisposed)
+                            {
+                                openForm.Dispose();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Ignoriere Fehler beim Schließen einzelner Fenster
+                            System.Diagnostics.Debug.WriteLine($"Fehler beim Schließen: {ex.Message}");
+                        }
+                    }
+                }
+            }
         }
 
         private void RecenterButtonsPanel(object? sender, EventArgs e)
@@ -118,8 +161,19 @@ namespace PdfiumOverlayTest
                 mainForm?.Activate();
             };
 
+            // WICHTIG: Keine Owner-Beziehung!
+            mainForm.Owner = null;
+            categoriesForm.Owner = null;
+
             categoriesForm.Show();
             mainForm.Show();
+
+            mainForm.TopMost = true;
+            categoriesForm.TopMost = true;
+
+            Application.DoEvents();
+            mainForm.Activate();
+            mainForm.BringToFront();
             
             mainForm.FormClosed += (s, ev) =>
             {

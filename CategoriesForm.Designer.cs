@@ -37,106 +37,113 @@ namespace PdfiumOverlayTest
         /// </summary>
         private void InitializeComponent()
         {
-            this._lstTags = new System.Windows.Forms.ListBox();
-            this._buttonPanel = new System.Windows.Forms.Panel();
-            this._btnAdd = new System.Windows.Forms.Button();
-            this._btnEdit = new System.Windows.Forms.Button();
-            this._btnDelete = new System.Windows.Forms.Button();
-            this._btnClose = new System.Windows.Forms.Button();
-            this._buttonPanel.SuspendLayout();
-            this.SuspendLayout();
+            _lstTags = new ListBox();
+            _buttonPanel = new Panel();
+            _btnAdd = new Button();
+            _btnEdit = new Button();
+            _btnDelete = new Button();
+            _btnClose = new Button();
+            _buttonPanel.SuspendLayout();
+            SuspendLayout();
             // 
             // _lstTags
             // 
-            this._lstTags.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
-            this._lstTags.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this._lstTags.ItemHeight = 50;
-            this._lstTags.Location = new System.Drawing.Point(12, 12);
-            this._lstTags.Name = "_lstTags";
-            this._lstTags.Size = new System.Drawing.Size(360, 404);
-            this._lstTags.TabIndex = 0;
-            this._lstTags.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.LstTags_DrawItem);
-            this._lstTags.DoubleClick += new System.EventHandler(this.LstTags_DoubleClick);
+            _lstTags.DrawMode = DrawMode.OwnerDrawFixed;
+            _lstTags.Font = new Font("Segoe UI", 10F);
+            _lstTags.ItemHeight = 50;
+            _lstTags.Location = new Point(14, 14);
+            _lstTags.Margin = new Padding(4, 3, 4, 3);
+            _lstTags.Name = "_lstTags";
+            _lstTags.Size = new Size(419, 454);
+            _lstTags.TabIndex = 0;
+            _lstTags.DrawItem += LstTags_DrawItem;
+            _lstTags.DoubleClick += LstTags_DoubleClick;
             // 
             // _buttonPanel
             // 
-            this._buttonPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
-            this._buttonPanel.Controls.Add(this._btnAdd);
-            this._buttonPanel.Controls.Add(this._btnEdit);
-            this._buttonPanel.Controls.Add(this._btnDelete);
-            this._buttonPanel.Controls.Add(this._btnClose);
-            this._buttonPanel.Location = new System.Drawing.Point(12, 422);
-            this._buttonPanel.Name = "_buttonPanel";
-            this._buttonPanel.Size = new System.Drawing.Size(360, 110);
-            this._buttonPanel.TabIndex = 1;
+            _buttonPanel.BackColor = Color.FromArgb(240, 240, 240);
+            _buttonPanel.Controls.Add(_btnAdd);
+            _buttonPanel.Controls.Add(_btnEdit);
+            _buttonPanel.Controls.Add(_btnDelete);
+            _buttonPanel.Controls.Add(_btnClose);
+            _buttonPanel.Location = new Point(14, 487);
+            _buttonPanel.Margin = new Padding(4, 3, 4, 3);
+            _buttonPanel.Name = "_buttonPanel";
+            _buttonPanel.Size = new Size(420, 162);
+            _buttonPanel.TabIndex = 1;
             // 
             // _btnAdd
             // 
-            this._btnAdd.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(235)))), ((int)(((byte)(235)))), ((int)(((byte)(235)))));
-            this._btnAdd.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._btnAdd.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this._btnAdd.Location = new System.Drawing.Point(10, 12);
-            this._btnAdd.Name = "_btnAdd";
-            this._btnAdd.Size = new System.Drawing.Size(100, 36);
-            this._btnAdd.TabIndex = 0;
-            this._btnAdd.Text = "Hinzufügen";
-            this._btnAdd.UseVisualStyleBackColor = false;
-            this._btnAdd.Click += new System.EventHandler(this.BtnAdd_Click);
+            _btnAdd.BackColor = Color.FromArgb(235, 235, 235);
+            _btnAdd.FlatStyle = FlatStyle.Flat;
+            _btnAdd.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _btnAdd.Location = new Point(12, 14);
+            _btnAdd.Margin = new Padding(4, 3, 4, 3);
+            _btnAdd.Name = "_btnAdd";
+            _btnAdd.Size = new Size(117, 42);
+            _btnAdd.TabIndex = 0;
+            _btnAdd.Text = "Hinzufügen";
+            _btnAdd.UseVisualStyleBackColor = false;
+            _btnAdd.Click += BtnAdd_Click;
             // 
             // _btnEdit
             // 
-            this._btnEdit.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(235)))), ((int)(((byte)(235)))), ((int)(((byte)(235)))));
-            this._btnEdit.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._btnEdit.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this._btnEdit.Location = new System.Drawing.Point(130, 12);
-            this._btnEdit.Name = "_btnEdit";
-            this._btnEdit.Size = new System.Drawing.Size(100, 36);
-            this._btnEdit.TabIndex = 1;
-            this._btnEdit.Text = "Ändern";
-            this._btnEdit.UseVisualStyleBackColor = false;
-            this._btnEdit.Click += new System.EventHandler(this.BtnEdit_Click);
+            _btnEdit.BackColor = Color.FromArgb(235, 235, 235);
+            _btnEdit.FlatStyle = FlatStyle.Flat;
+            _btnEdit.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _btnEdit.Location = new Point(152, 14);
+            _btnEdit.Margin = new Padding(4, 3, 4, 3);
+            _btnEdit.Name = "_btnEdit";
+            _btnEdit.Size = new Size(117, 42);
+            _btnEdit.TabIndex = 1;
+            _btnEdit.Text = "Ändern";
+            _btnEdit.UseVisualStyleBackColor = false;
+            _btnEdit.Click += BtnEdit_Click;
             // 
             // _btnDelete
             // 
-            this._btnDelete.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(235)))), ((int)(((byte)(235)))), ((int)(((byte)(235)))));
-            this._btnDelete.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._btnDelete.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this._btnDelete.Location = new System.Drawing.Point(250, 12);
-            this._btnDelete.Name = "_btnDelete";
-            this._btnDelete.Size = new System.Drawing.Size(100, 36);
-            this._btnDelete.TabIndex = 2;
-            this._btnDelete.Text = "Löschen";
-            this._btnDelete.UseVisualStyleBackColor = false;
-            this._btnDelete.Click += new System.EventHandler(this.BtnDelete_Click);
+            _btnDelete.BackColor = Color.FromArgb(235, 235, 235);
+            _btnDelete.FlatStyle = FlatStyle.Flat;
+            _btnDelete.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _btnDelete.Location = new Point(292, 14);
+            _btnDelete.Margin = new Padding(4, 3, 4, 3);
+            _btnDelete.Name = "_btnDelete";
+            _btnDelete.Size = new Size(117, 42);
+            _btnDelete.TabIndex = 2;
+            _btnDelete.Text = "Löschen";
+            _btnDelete.UseVisualStyleBackColor = false;
+            _btnDelete.Click += BtnDelete_Click;
             // 
             // _btnClose
             // 
-            this._btnClose.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(235)))), ((int)(((byte)(235)))), ((int)(((byte)(235)))));
-            this._btnClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._btnClose.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this._btnClose.Location = new System.Drawing.Point(10, 60);
-            this._btnClose.Name = "_btnClose";
-            this._btnClose.Size = new System.Drawing.Size(340, 40);
-            this._btnClose.TabIndex = 3;
-            this._btnClose.Text = "Beenden";
-            this._btnClose.UseVisualStyleBackColor = false;
-            this._btnClose.Click += new System.EventHandler(this.BtnClose_Click);
+            _btnClose.BackColor = Color.FromArgb(235, 235, 235);
+            _btnClose.FlatStyle = FlatStyle.Flat;
+            _btnClose.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            _btnClose.Location = new Point(12, 86);
+            _btnClose.Margin = new Padding(4, 3, 4, 3);
+            _btnClose.Name = "_btnClose";
+            _btnClose.Size = new Size(397, 46);
+            _btnClose.TabIndex = 3;
+            _btnClose.Text = "Beenden";
+            _btnClose.UseVisualStyleBackColor = false;
+            _btnClose.Click += BtnClose_Click;
             // 
             // CategoriesForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(384, 544);
-            this.Controls.Add(this._buttonPanel);
-            this.Controls.Add(this._lstTags);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "CategoriesForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Kategorien (Tags) verwalten";
-            this._buttonPanel.ResumeLayout(false);
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(448, 661);
+            Controls.Add(_buttonPanel);
+            Controls.Add(_lstTags);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Margin = new Padding(4, 3, 4, 3);
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "CategoriesForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Kategorien (Tags) verwalten";
+            _buttonPanel.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion
