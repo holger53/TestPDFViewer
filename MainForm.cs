@@ -53,7 +53,36 @@ namespace PdfiumOverlayTest
         public MainForm()
         {
             if (!IsInDesigner())
-                PDFium.FPDF_InitLibrary();
+            {
+                // Prüfe ob pdfium.dll verfügbar ist
+                if (!CheckPdfiumAvailability())
+                {
+                    // Zeige Fehlermeldung und schließe das Formular
+                    this.Load += (s, e) => this.Close();
+                    return;
+                }
+
+                try
+                {
+                    PDFium.FPDF_InitLibrary();
+                }
+                catch (DllNotFoundException ex)
+                {
+                    ShowPdfiumError(ex);
+                    this.Load += (s, e) => this.Close();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Fehler beim Initialisieren der PDF-Bibliothek:\n\n{ex.Message}",
+                        "Initialisierungsfehler",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    this.Load += (s, e) => this.Close();
+                    return;
+                }
+            }
 
             Text = "Kürzel für PDF-Dateien";
             ClientSize = new Size(900, 700);
@@ -137,6 +166,71 @@ namespace PdfiumOverlayTest
 
             // WICHTIG: MainForm immer im Vordergrund halten
             this.TopMost = false; // Wird in StartForm gesetzt
+        }
+
+        /// <summary>
+        /// Prüft ob pdfium.dll verfügbar ist
+        /// </summary>
+        private static bool CheckPdfiumAvailability()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] possiblePaths = new[]
+            {
+                Path.Combine(baseDir, "pdfium.dll"),
+                Path.Combine(baseDir, "runtimes", "win-x64", "native", "pdfium.dll"),
+                Path.Combine(baseDir, "runtimes", "win-x86", "native", "pdfium.dll")
+            };
+
+            bool found = possiblePaths.Any(File.Exists);
+
+            if (!found)
+            {
+                ShowPdfiumError(null);
+            }
+
+            return found;
+        }
+
+        /// <summary>
+        /// Zeigt eine hilfreiche Fehlermeldung an, wenn pdfium.dll fehlt
+        /// </summary>
+        private static void ShowPdfiumError(Exception? ex)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string architecture = Environment.Is64BitProcess ? "x64" : "x86";
+
+            string message = $"Die erforderliche Bibliothek 'pdfium.dll' wurde nicht gefunden.\n\n" +
+                           $"Diese DLL wird für die PDF-Verarbeitung benötigt.\n\n" +
+                           $"Bitte führen Sie folgende Schritte aus:\n\n" +
+                           $"1. Laden Sie pdfium.dll herunter:\n" +
+                           $"   https://github.com/bblanchon/pdfium-binaries/releases/latest\n\n" +
+                           $"2. Wählen Sie die Datei:\n" +
+                           $"   pdfium-windows-{architecture}.tgz\n\n" +
+                           $"3. Extrahieren Sie die Datei und kopieren Sie 'pdfium.dll' nach:\n" +
+                           $"   {baseDir}\n\n" +
+                           $"4. Starten Sie die Anwendung neu.\n\n" +
+                           $"Aktuelles Verzeichnis: {baseDir}";
+
+            if (ex != null)
+            {
+                message += $"\n\nTechnische Details:\n{ex.Message}";
+            }
+
+            MessageBox.Show(
+                message,
+                "PDFium-Bibliothek fehlt",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            // Optional: Link in Zwischenablage kopieren
+            try
+            {
+                Clipboard.SetText("https://github.com/bblanchon/pdfium-binaries/releases/latest");
+            }
+            catch
+            {
+                // Ignoriere Fehler beim Kopieren in die Zwischenablage
+            }
         }
 
         private ContextMenuStrip? _mainFormContextMenu;

@@ -13,7 +13,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using DrawingColor = System.Drawing.Color;
 using WordColor = DocumentFormat.OpenXml.Wordprocessing.Color;
 using PdfiumOverlayTest.Localization;
-using PdfiumOverlayTest.Localization;
+
 
 namespace PdfiumOverlayTest
 {
