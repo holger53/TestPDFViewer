@@ -1,32 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Unbenannt.png" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="PDFsharp" Version="6.1.1" />
+		<PackageReference Include="DocumentFormat.OpenXml" Version="3.0.2" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="StartForm.Designer.cs.bak" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Update="Localization\Strings.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Strings.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="Unbenannt.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Docnet.Core" Version="2.6.0" />
-    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-    <PackageReference Include="Pdfium.Net.SDK" Version="4.103.2704" />
-    <PackageReference Include="PDFsharp" Version="6.2.3" />
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Update="Localization\Strings.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Strings.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Localization\Strings.de-DE.resx">
+			<DependentUpon>Strings.resx</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Localization\Strings.en-US.resx">
+			<DependentUpon>Strings.resx</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Localization\Strings.es-ES.resx">
+			<DependentUpon>Strings.resx</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Localization\Strings.fr-FR.resx">
+			<DependentUpon>Strings.resx</DependentUpon>
+		</EmbeddedResource>
+	</ItemGroup>
 
 </Project>

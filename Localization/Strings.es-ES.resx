@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StartForm_Title" xml:space="preserve">
+    <value>Atajos para archivos PDF</value>
+    <comment>Título del formulario de inicio</comment>
+  </data>
+  <data name="Button_SetTags" xml:space="preserve">
+    <value>Establecer etiqueta (Abrir PDF)</value>
+    <comment>Botón para abrir la ventana principal</comment>
+  </data>
+  <data name="Button_ManageCategories" xml:space="preserve">
+    <value>Administrar categorías (Etiquetas)</value>
+    <comment>Botón de gestión de categorías</comment>
+  </data>
+  <data name="Button_CompanyData" xml:space="preserve">
+    <value>Datos de empresa/personales</value>
+    <comment>Botón para datos de empresa</comment>
+  </data>
+  <data name="Button_Exit" xml:space="preserve">
+    <value>Salir</value>
+    <comment>Botón de salida</comment>
+  </data>
+  <data name="Message_CompanyDataSaved" xml:space="preserve">
+    <value>Los datos de la empresa se guardaron correctamente.</value>
+    <comment>Mensaje de éxito al guardar</comment>
+  </data>
+  <data name="Message_Success" xml:space="preserve">
+    <value>Éxito</value>
+    <comment>Título para mensajes de éxito</comment>
+  </data>
+  <data name="Error_LoadCompanyData" xml:space="preserve">
+    <value>Error al cargar los datos de la empresa:</value>
+    <comment>Mensaje de error al cargar</comment>
+  </data>
+  <data name="Error_SaveCompanyData" xml:space="preserve">
+    <value>Error al guardar los datos de la empresa:</value>
+    <comment>Mensaje de error al guardar</comment>
+  </data>
+  <data name="Error_Title" xml:space="preserve">
+    <value>Error</value>
+    <comment>Título para mensajes de error</comment>
+  </data>
+  <data name="Message_LanguageChanged" xml:space="preserve">
+    <value>Idioma cambiado. Algunos cambios entrarán en vigor en el próximo inicio.</value>
+    <comment>Aviso después del cambio de idioma</comment>
+  </data>
+</root>

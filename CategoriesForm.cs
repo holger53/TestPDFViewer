@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Linq;  // ← HINZUFÜGEN für .Any() und .ToList()
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
@@ -11,6 +12,8 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DrawingColor = System.Drawing.Color;
 using WordColor = DocumentFormat.OpenXml.Wordprocessing.Color;
+using PdfiumOverlayTest.Localization;
+using PdfiumOverlayTest.Localization;
 
 namespace PdfiumOverlayTest
 {
@@ -1133,5 +1136,15 @@ namespace PdfiumOverlayTest
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
+
+        public void UpdateUI()
+        {
+            // CategoriesForm: Die UI-Elemente haben keine lokalisierbaren Texte
+            // Die Buttons verwenden Icons oder sind selbsterklärend
+            // Falls in Zukunft lokalisierbare Texte hinzugefügt werden, hier einfügen
+        }
     } // Ende CategoriesForm
 } // Ende Namespace
+    
+
+

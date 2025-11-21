@@ -4,10 +4,11 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using PdfiumOverlayTest.Localization;
 
 namespace PdfiumOverlayTest
 {
-    public class TagOverlayForm : Form
+    public partial class TagOverlayForm : Form, ILocalizable
     {
         public string TagText { get; private set; } = string.Empty;
         public Color TagColor { get; private set; } = Color.FromArgb(220, 120, 0);
@@ -26,15 +27,15 @@ namespace PdfiumOverlayTest
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint, true);
             SetStyle(ControlStyles.Opaque, true);
 
-            // Designer-Vorschau: einfache Fläche statt Layered-Window
             if (IsInDesigner())
             {
                 BackColor = Color.FromArgb(220, 120, 0);
                 ForeColor = Color.White;
             }
 
-            // Aktuelle Größe (Breite x Höhe) – läuft in Designer ebenfalls
             Size = new Size(58, 42);
+
+            UpdateUI();
         }
 
         protected override CreateParams CreateParams
@@ -94,7 +95,7 @@ namespace PdfiumOverlayTest
                 {
                     g.Clear(Color.Transparent);
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias; // NEU: Bessere Textdarstellung
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
                     using (var tagBrush = new SolidBrush(TagColor))
                         g.FillRectangle(tagBrush, 0, 0, Width, Height);
@@ -104,23 +105,22 @@ namespace PdfiumOverlayTest
 
                     if (!string.IsNullOrEmpty(TagText))
                     {
-                        // NEU: Dynamische Schriftgröße basierend auf Textlänge
                         float fontSize;
                         if (TagText.Length > 20)
-                            fontSize = 10; // Sehr lange Texte (Freier Text)
+                            fontSize = 10;
                         else if (TagText.Length > 5)
-                            fontSize = 14; // Mittlere Texte
+                            fontSize = 14;
                         else if (TagText.Length > 1)
-                            fontSize = 18; // Kurze Texte (2-5 Zeichen)
+                            fontSize = 18;
                         else
-                            fontSize = 23; // Einzelne Buchstaben (normale Tags)
+                            fontSize = 23;
 
                         using var font = new Font("Arial", fontSize, FontStyle.Bold);
                         using var sf = new StringFormat
                         {
                             Alignment = StringAlignment.Center,
                             LineAlignment = StringAlignment.Center,
-                            Trimming = StringTrimming.EllipsisCharacter // NEU: Zeige "..." wenn zu lang
+                            Trimming = StringTrimming.EllipsisCharacter
                         };
                         g.DrawString(TagText, font, Brushes.White, new RectangleF(0, 0, Width, Height), sf);
                     }
@@ -186,6 +186,15 @@ namespace PdfiumOverlayTest
                 return;
             }
             base.OnPaint(e);
+        }
+
+        public void UpdateUI()
+        {
+            // TagOverlayForm hat keine UI-Steuerelemente, die lokalisiert werden müssen
+            if (IsHandleCreated && !IsInDesigner())
+            {
+                UpdateDisplay();
+            }
         }
 
         // P/Invoke

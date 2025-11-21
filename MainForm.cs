@@ -1,18 +1,20 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;  // ← HINZUFÜGEN für .ToList()
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.Collections.Generic;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using PdfSharp.Drawing;
+using PdfiumOverlayTest.Localization;
 
 namespace PdfiumOverlayTest
 {
-    public partial class MainForm : Form
+    public partial class MainForm : Form, ILocalizable
     {
         private IntPtr _pdfDocument = IntPtr.Zero;
         private string? _pdfFilePath;
@@ -127,6 +129,7 @@ namespace PdfiumOverlayTest
             this.LocationChanged += MainForm_LocationChanged;
             this.SizeChanged += MainForm_SizeChanged;
             this.FormClosing += MainForm_FormClosing;
+            this.KeyDown += MainForm_EmergencyExit; // Registriere den Notfall-Exit Handler
 
             CreateMainFormContextMenu();
 
@@ -159,8 +162,8 @@ namespace PdfiumOverlayTest
         // NEU: Methode zum Beenden der Anwendung (nach MainForm_ResetPosition, Zeile 175):
         private void MainForm_Exit(object? sender, EventArgs e)
         {
-            // KEIN Dialog mehr - einfach beenden
-            Application.Exit();
+            // Schließe das Formular statt Application.Exit()
+            this.Close();
         }
 
         private void MainForm_ResetPosition(object? sender, EventArgs e)
@@ -246,7 +249,7 @@ namespace PdfiumOverlayTest
                 return;
             }
 
-            // VEREINFACHT: Nur noch 2 Optionen
+            // Wenn der Benutzer das MainForm schließt, frage nach und schließe alle Fenster
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 var result = MessageBox.Show(
@@ -261,8 +264,8 @@ namespace PdfiumOverlayTest
                     return;
                 }
                 
-                // Bei "Ja" → Beenden
-                Application.Exit();
+                // Bei "Ja" → Schließe alle Fenster durch das normale Schließen
+                // Kein Application.Exit() - das verursacht InvalidOperationException
             }
 
             SaveWindowPosition();
@@ -870,8 +873,8 @@ namespace PdfiumOverlayTest
                         }
                     }
 
-                    // Zeichne die Tag-Overlays (M, P, R, B, K)
-                    foreach (var tag in _tagOverlays)
+                    // GEÄNDERT: ToList() verwenden um eine Kopie zu erstellen
+                    foreach (var tag in _tagOverlays.ToList() )
                     {
                         if (string.IsNullOrEmpty(tag.TagText)) continue;
 
@@ -1164,7 +1167,7 @@ namespace PdfiumOverlayTest
             // Notfall-Beenden mit Strg + Shift + Q
             if (e.Control && e.Shift && e.KeyCode == Keys.Q)
             {
-                Application.Exit();
+                this.Close();
                 e.Handled = true;
             }
             
@@ -1177,5 +1180,12 @@ namespace PdfiumOverlayTest
                 e.Handled = true;
             }
         }
+
+        public void UpdateUI()
+        {
+            // MainForm: Keine lokalisierbaren UI-Elemente momentan
+            // Buttons und Labels verwenden hartcodierte deutsche Texte
+        }
     }
 }
+

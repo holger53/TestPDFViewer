@@ -2,11 +2,12 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
-using System.Text.Json;  // GEÄNDERT: Von Newtonsoft.Json zu System.Text.Json
+using System.Text.Json;  // GEï¿½NDERT: Von Newtonsoft.Json zu System.Text.Json
+using PdfiumOverlayTest.Localization;
 
 namespace PdfiumOverlayTest
 {
-    public class CompanyDataDialog : Form
+    public partial class CompanyDataDialog : Form, ILocalizable
     {
         private TextBox _txtCompanyName;
         private TextBox _txtAddress;
@@ -117,7 +118,7 @@ namespace PdfiumOverlayTest
             };
             Controls.Add(label);
 
-            // Panel als Container für TextBox (ermöglicht Padding)
+            // Panel als Container fï¿½r TextBox (ermï¿½glicht Padding)
             var panel = new Panel
             {
                 Location = new Point(textBoxLeft, y),
@@ -148,7 +149,7 @@ namespace PdfiumOverlayTest
                 if (File.Exists(filePath))
                 {
                     var json = File.ReadAllText(filePath);
-                    // GEÄNDERT: Verwende System.Text.Json statt Newtonsoft
+                    // GEï¿½NDERT: Verwende System.Text.Json statt Newtonsoft
                     var data = JsonSerializer.Deserialize<CompanyData>(json);
                     if (data != null)
                     {
@@ -187,7 +188,7 @@ namespace PdfiumOverlayTest
             {
                 string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "companydata.json");
                 
-                // GEÄNDERT: Verwende System.Text.Json statt Newtonsoft
+                // GEï¿½NDERT: Verwende System.Text.Json statt Newtonsoft
                 var options = new JsonSerializerOptions 
                 { 
                     WriteIndented = true 
@@ -201,5 +202,12 @@ namespace PdfiumOverlayTest
                     "Speicherfehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        public void UpdateUI()
+        {
+            // CompanyDataDialog ist modal und wird bei jeder Verwendung neu erstellt
+            // Daher keine Runtime-Aktualisierung nÃ¶tig
+        }
     }
 }
+
